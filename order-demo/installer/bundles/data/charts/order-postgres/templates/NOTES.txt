@@ -1,0 +1,1 @@
+# TODO: deploy PostgreSQL (StatefulSet or operator CR). Workshop participants implement templates.

@@ -1,0 +1,7 @@
+.git
+out/
+hack/out/
+coordinator/node_modules/
+order-demo/order-demo
+order-demo/installer/installer.tar
+**/.DS_Store

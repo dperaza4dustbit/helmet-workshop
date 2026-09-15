@@ -1,0 +1,5 @@
+name: Order Producer
+namespace: CHANGE_ME
+properties:
+  image: order-producer:latest
+  queueName: orders

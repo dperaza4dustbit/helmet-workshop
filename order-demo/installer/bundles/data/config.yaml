@@ -1,0 +1,7 @@
+# TODO: set display name and target namespace for the data product.
+name: Order Data
+namespace: CHANGE_ME
+properties:
+  # TODO: rabbitmq host, postgres connection hints for other bundles
+  messageQueue: {}
+  database: {}

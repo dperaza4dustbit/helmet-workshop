@@ -1,0 +1,8 @@
+---
+apiVersion: v2
+name: order-rabbitmq
+description: RabbitMQ for order queue (workshop stub)
+type: application
+version: 0.1.0
+annotations:
+  helmet.redhat-appstudio.github.com/bundle-types-supported: product
