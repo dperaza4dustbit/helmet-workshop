@@ -1,0 +1,1 @@
+# TODO: deploy RabbitMQ (Deployment/Service). Expose AMQP URL via Secret for producer/consumer.

@@ -1,0 +1,6 @@
+name: order-demo
+# TODO (workshop): list every bundle participants must deploy.
+products:
+  # - local://data
+  # - local://producer
+  # - local://consumer
