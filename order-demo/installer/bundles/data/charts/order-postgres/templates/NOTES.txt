@@ -1,1 +1,7 @@
-# TODO: deploy PostgreSQL (StatefulSet or operator CR). Workshop participants implement templates.
+Order Data — PostgreSQL
+========================
+Instance: orders
+Secret:   orders-pgsql-user (namespace {{ (index .Values.pgsqlService.instances 0).namespace }})
+Service:  orders-pgsql.{{ (index .Values.pgsqlService.instances 0).namespace }}.svc:5432
+
+Database credentials are stored in the orders-pgsql-user Secret for producer and consumer apps.

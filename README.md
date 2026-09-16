@@ -17,10 +17,10 @@ helmet-workshop/
 ├── container/            # Workshop pod + coordinator image builds
 ├── docs/                 # Architecture, participant guide, instructor solution
 ├── hack/                 # setup-workshop.sh, cleanup-workshop.sh
-└── order-demo/           # Incomplete Helmet installer (the exercise)
+└── order-demo/           # Helmet installer (full solution; workshop will start from a stripped copy)
     ├── main.go
     └── installer/
-        ├── helmet.yaml   # START HERE — mostly TODO
+        ├── helmet.yaml   # Lists data, producer, consumer bundles
         └── bundles/{data,producer,consumer}/
 ```
 
@@ -78,6 +78,7 @@ Console → namespace → **workshop** pod terminal:
 
 ```bash
 cd ~/helmet-workshop/order-demo   # or: cd "$ORDER_DEMO_HOME"
+export KUBECONFIG=""              # in-cluster auth via workshop ServiceAccount
 make build
 ./order-demo config --create --namespace "$WORKSHOP_NAMESPACE"
 # edit helmet.yaml, bundles/*/config.yaml, values.yaml.tpl

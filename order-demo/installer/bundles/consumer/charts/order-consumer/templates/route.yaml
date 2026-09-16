@@ -1,0 +1,22 @@
+{{- if .Values.orderConsumer.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: order-consumer
+  namespace: {{ .Values.orderConsumer.namespace }}
+  labels:
+    app: order-consumer
+    app.kubernetes.io/part-of: order-demo
+spec:
+  {{- with .Values.orderConsumer.route.hostname }}
+  host: {{ . }}
+  {{- end }}
+  to:
+    kind: Service
+    name: order-consumer
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

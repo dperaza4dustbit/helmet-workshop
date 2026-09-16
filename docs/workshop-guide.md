@@ -21,12 +21,12 @@ Hints live in `TODO` comments in the repo. Instructors have a full reference und
 
 1. Open the **workshop coordinator** link from your instructor (one click → your console URL, username, password).
 2. Log in to OpenShift console → your namespace → **Workloads → Pods → workshop** → **Terminal**.
-2. `cd ~/order-demo` (or path from pod env).
-3. Read bundle READMEs under `installer/bundles/*/README.md`.
-4. `order-demo config --create` and edit YAML as needed.
-5. `order-demo topology` — fix cycles / missing deps until it succeeds.
-6. `order-demo deploy` — wait for Helm releases.
-7. Verify: producer HTTP endpoint enqueues; consumer logs processed orders.
+3. `cd "$ORDER_DEMO_HOME"` and `export KUBECONFIG=""` (Helmet uses the pod ServiceAccount, not `~/.kube/config`).
+4. Read bundle READMEs under `installer/bundles/*/README.md`.
+5. `make build`, then `./order-demo config --create --namespace "$WORKSHOP_NAMESPACE"`.
+6. `order-demo topology` — fix cycles / missing deps until it succeeds.
+7. `order-demo deploy` — wait for Helm releases.
+8. Verify: producer HTTP endpoint enqueues; consumer logs processed orders.
 
 ## Success criteria
 

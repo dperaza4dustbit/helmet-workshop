@@ -1,0 +1,130 @@
+{{- if .Values.rabbitmq.enabled }}
+{{- $rmq := .Values.rabbitmq }}
+{{- $ns := $rmq.namespace }}
+{{- $secretName := printf "orders-%s" $rmq.secretName }}
+{{- $serviceName := printf "orders-%s" $rmq.service.name }}
+{{- $podName := "orders-rabbitmq" }}
+{{- $secret := lookup "v1" "Secret" $ns $secretName }}
+{{- $password := randAlphaNum 16 }}
+{{- if $secret }}
+  {{- $password = index $secret.data "password" | b64dec }}
+{{- end }}
+{{- $host := printf "%s.%s.svc" $serviceName $ns }}
+{{- $amqpUrl := printf "amqp://%s:%s@%s:%d/" $rmq.username $password $host ($rmq.service.port | int) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/part-of: order-demo
+type: Opaque
+stringData:
+  username: {{ $rmq.username | quote }}
+  password: {{ $password | quote }}
+  host: {{ $host | quote }}
+  port: {{ $rmq.service.port | toString | quote }}
+  queue: {{ $rmq.queueName | quote }}
+  amqp_url: {{ $amqpUrl | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orders-rabbitmq-definitions
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/part-of: order-demo
+data:
+  definitions.json: |
+    {
+      "queues": [
+        {
+          "name": {{ $rmq.queueName | quote }},
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {}
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $serviceName }}
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/part-of: order-demo
+spec:
+  selector:
+    app: {{ $podName }}
+  ports:
+    - name: amqp
+      port: {{ $rmq.service.port }}
+      targetPort: amqp
+    - name: management
+      port: {{ $rmq.service.managementPort }}
+      targetPort: management
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $podName }}
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/part-of: order-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $podName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $podName }}
+        app.kubernetes.io/part-of: order-demo
+    spec:
+      containers:
+        - name: rabbitmq
+          image: "{{ $rmq.image.repository }}:{{ $rmq.image.tag }}"
+          imagePullPolicy: {{ $rmq.image.pullPolicy }}
+          ports:
+            - name: amqp
+              containerPort: {{ $rmq.service.port }}
+            - name: management
+              containerPort: {{ $rmq.service.managementPort }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: username
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: password
+            - name: RABBITMQ_LOAD_DEFINITIONS
+              value: /etc/rabbitmq/definitions/definitions.json
+          volumeMounts:
+            - name: definitions
+              mountPath: /etc/rabbitmq/definitions
+              readOnly: true
+          resources:
+            limits:
+              cpu: {{ $rmq.resources.limits.cpu }}
+              memory: {{ $rmq.resources.limits.memory }}
+            requests:
+              cpu: {{ $rmq.resources.requests.cpu }}
+              memory: {{ $rmq.resources.requests.memory }}
+          readinessProbe:
+            tcpSocket:
+              port: amqp
+            initialDelaySeconds: 20
+            periodSeconds: 15
+      volumes:
+        - name: definitions
+          configMap:
+            name: orders-rabbitmq-definitions
+{{- end }}
