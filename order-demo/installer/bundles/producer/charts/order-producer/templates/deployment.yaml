@@ -1,0 +1,120 @@
+{{- if .Values.orderProducer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-producer
+  namespace: {{ .Values.orderProducer.namespace }}
+  labels:
+    app: order-producer
+    app.kubernetes.io/part-of: order-demo
+spec:
+  selector:
+    app: order-producer
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-producer
+  namespace: {{ .Values.orderProducer.namespace }}
+  labels:
+    app: order-producer
+    app.kubernetes.io/part-of: order-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-producer
+  template:
+    metadata:
+      labels:
+        app: order-producer
+        app.kubernetes.io/part-of: order-demo
+    spec:
+      containers:
+        - name: order-producer
+          image: {{ .Values.orderProducer.image | quote }}
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eu
+              mkdir -p /tmp/app/public /tmp/.npm
+              cp /opt/app-src/server.js /opt/app-src/data.js /opt/app-src/package.json /tmp/app/
+              cp /opt/app-src/index.html /opt/app-src/app.js /opt/app-src/styles.css /tmp/app/public/
+              cd /tmp/app
+              npm install --omit=dev --cache /tmp/.npm
+              exec node server.js
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: HOME
+              value: /tmp
+            - name: NPM_CONFIG_CACHE
+              value: /tmp/.npm
+            - name: PORT
+              value: "8080"
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orderProducer.database.secretName }}
+                  key: host
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orderProducer.database.secretName }}
+                  key: port
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orderProducer.database.secretName }}
+                  key: user
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orderProducer.database.secretName }}
+                  key: password
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orderProducer.database.secretName }}
+                  key: dbname
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orderProducer.rabbitmq.secretName }}
+                  key: amqp_url
+            - name: QUEUE_NAME
+              value: {{ .Values.orderProducer.queueName | quote }}
+          volumeMounts:
+            - name: app
+              mountPath: /opt/app-src
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - name: app
+          configMap:
+            name: order-producer-app
+{{- end }}

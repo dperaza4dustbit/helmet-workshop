@@ -1,7 +1,26 @@
 {{- $cons := required "Order Consumer product" .Installer.Products.Order_Consumer -}}
-# TODO: same AMQP settings as producer; optional Postgres DSN from data bundle.
-
-order-consumer:
+{{- $ns := default .Installer.Namespace $cons.Namespace -}}
+{{- $ingress := default "" .OpenShift.Ingress.Domain -}}
+{{- $queueName := default "orders" (index $cons.Properties "queueName") -}}
+{{- $image := default "docker.io/library/node:20-alpine" (index $cons.Properties "image") -}}
+orderConsumer:
   enabled: true
-  namespace: {{ default .Installer.Namespace $cons.Namespace }}
-  queueName: {{ default "orders" $cons.Properties.queueName }}
+  namespace: {{ $ns | quote }}
+  image: {{ $image | quote }}
+  queueName: {{ $queueName | quote }}
+  database:
+    secretName: orders-pgsql-user
+  rabbitmq:
+    secretName: orders-rabbitmq-user
+  route:
+    {{- if $ingress }}
+    hostname: rewards-store-{{ $ns }}.{{ $ingress }}
+    {{- else }}
+    hostname: ""
+    {{- end }}
+  managerPortal:
+    {{- if $ingress }}
+    hostname: rewards-managers-{{ $ns }}.{{ $ingress }}
+    {{- else }}
+    hostname: ""
+    {{- end }}

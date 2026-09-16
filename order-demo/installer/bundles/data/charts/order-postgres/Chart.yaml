@@ -1,8 +1,11 @@
 ---
 apiVersion: v2
 name: order-postgres
-description: PostgreSQL for order persistence (workshop stub)
+description: PostgreSQL for Helmet Corp order persistence
 type: application
 version: 0.1.0
 annotations:
   helmet.redhat-appstudio.github.com/bundle-types-supported: product
+  helmet.redhat-appstudio.github.com/product-name: Order Data
+  helmet.redhat-appstudio.github.com/use-product-namespace: Order Data
+  helmet.redhat-appstudio.github.com/depends-on-bundle-charts: order-rabbitmq

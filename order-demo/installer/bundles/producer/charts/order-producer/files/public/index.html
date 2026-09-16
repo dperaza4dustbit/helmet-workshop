@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Helmet Corp — Manager Rewards</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <header class="hero">
+      <div class="brand">
+        <span class="logo">⛑️</span>
+        <div>
+          <p class="eyebrow">Helmet Corp</p>
+          <h1>Manager Rewards Portal</h1>
+        </div>
+      </div>
+      <p class="subtitle">
+        Recognize outstanding teammates with a curated thank-you gift. Orders route to
+        your department head and the corp store for fulfillment.
+      </p>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Choose a reward</h2>
+          <p>Select one of ten items, then tell us who earned it.</p>
+        </div>
+        <div id="catalog" class="catalog"></div>
+
+        <form id="order-form" class="order-form hidden">
+          <div class="selected-item" id="selected-item"></div>
+          <div class="field-grid">
+            <label>
+              Employee name
+              <input name="employeeName" required placeholder="Alex Rivera" />
+            </label>
+            <label>
+              Employee ID
+              <input name="employeeId" required placeholder="HC-10482" />
+            </label>
+            <label class="full">
+              Department
+              <select name="departmentId" required id="department-select"></select>
+            </label>
+          </div>
+          <div class="actions">
+            <button type="button" class="ghost" id="reset-selection">Change item</button>
+            <button type="submit" class="primary">Submit thank-you order</button>
+          </div>
+        </form>
+        <p id="form-message" class="message" hidden></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Department orders</h2>
+          <p>Mark an order delivered after you hand the gift to the employee.</p>
+        </div>
+        <div id="orders" class="orders"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -109,6 +109,48 @@ bind_user_to_namespace() {
   run oc adm policy add-role-to-user "$role" "$user" -n "$ns" --rolebinding-name="workshop-access"
 }
 
+# Helmet reads installer ConfigMaps in the current namespace only (namespace admin
+# is enough). Cluster-wide ConfigMap list is intentionally not granted.
+# IngressController get is still required so .OpenShift.Ingress.Domain is populated.
+WORKSHOP_HELMET_CLUSTER_ROLE="${WORKSHOP_HELMET_CLUSTER_ROLE:-workshop-helmet-config-reader}"
+
+ensure_workshop_helmet_cluster_role() {
+  # Always apply so rule updates take effect on re-run.
+  run oc apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ${WORKSHOP_HELMET_CLUSTER_ROLE}
+  labels:
+    helmet.redhat-appstudio.github.com/workshop: "true"
+rules:
+  - apiGroups: ["operator.openshift.io"]
+    resources: ["ingresscontrollers"]
+    verbs: ["get"]
+EOF
+}
+
+bind_workshop_sa_helmet_access() {
+  local ns="$1"
+  local binding="workshop-helmet-config-${ns}"
+  run oc apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${binding}
+  labels:
+    helmet.redhat-appstudio.github.com/workshop: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ${WORKSHOP_HELMET_CLUSTER_ROLE}
+subjects:
+  - kind: ServiceAccount
+    name: workshop
+    namespace: ${ns}
+EOF
+}
+
 bind_instructor_to_participant_namespaces() {
   local instructor_ns="$1"
   local instructor_user="$2"
@@ -380,12 +422,17 @@ spec:
               value: /home/workshop
             - name: WORKSHOP_NAMESPACE
               value: ${ns}
+            - name: HELMET_CONFIG_NAMESPACE
+              value: ${ns}
             - name: HELMET_SRC
               value: /home/workshop/helmet
             - name: ORDER_DEMO_HOME
               value: /home/workshop/helmet-workshop/order-demo
             - name: WORKSHOP_IMAGE
               value: ${WORKSHOP_IMAGE}
+            # Helmet CLI: use in-cluster ServiceAccount auth (no ~/.kube/config in the pod).
+            - name: KUBECONFIG
+              value: ""
           workingDir: /home/workshop/helmet-workshop/order-demo
           resources:
             requests:
@@ -629,6 +676,7 @@ provision_slot() {
   log "=== Provisioning $ns (user: $user) ==="
   create_namespace "$ns"
   bind_user_to_namespace "$ns" "$user"
+  bind_workshop_sa_helmet_access "$ns"
   if is_instructor_namespace "$ns"; then
     bind_instructor_to_participant_namespaces "$ns" "$user"
   fi
@@ -648,6 +696,7 @@ provision_slot() {
 
 main() {
   restrict_cluster_self_provisioner
+  ensure_workshop_helmet_cluster_role
 
   if [[ "$SKIP_HTPASSWD" -eq 0 ]]; then
     if [[ "$DRY_RUN" -eq 0 ]]; then

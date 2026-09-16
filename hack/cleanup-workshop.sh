@@ -98,10 +98,20 @@ report_remaining_workshop_namespaces() {
   fi
 }
 
+delete_workshop_helmet_bindings() {
+  local ns
+  while IFS= read -r ns; do
+    run oc delete clusterrolebinding "workshop-helmet-config-${ns}" --ignore-not-found
+  done < <(all_workshop_namespaces)
+  run oc delete clusterrole "${WORKSHOP_HELMET_CLUSTER_ROLE:-workshop-helmet-config-reader}" --ignore-not-found
+}
+
 main() {
   local ns
 
   log "Cleanup: ${PARTICIPANT_COUNT} participants + ${INSTRUCTOR_COUNT} instructors (prefix: ${WORKSHOP_PREFIX})"
+
+  delete_workshop_helmet_bindings
 
   while IFS= read -r ns; do
     delete_namespace "$ns"

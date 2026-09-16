@@ -1,1 +1,8 @@
-# TODO: Deployment + Service + Route for producer app. Publish to RabbitMQ.
+{{- if .Values.orderProducer.enabled }}
+Helmet Corp — Manager Rewards Portal
+{{- if .Values.orderProducer.route.hostname }}
+URL: https://{{ .Values.orderProducer.route.hostname }}/
+{{- else }}
+URL: oc -n {{ .Values.orderProducer.namespace }} get route order-producer -o jsonpath='https://{.spec.host}{"\n"}'
+{{- end }}
+{{- end }}

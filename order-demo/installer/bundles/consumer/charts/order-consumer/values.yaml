@@ -1,0 +1,14 @@
+---
+orderConsumer:
+  enabled: false
+  namespace: default
+  image: docker.io/library/node:20-alpine
+  queueName: orders
+  database:
+    secretName: orders-pgsql-user
+  rabbitmq:
+    secretName: orders-rabbitmq-user
+  route:
+    hostname: ""
+  managerPortal:
+    hostname: ""

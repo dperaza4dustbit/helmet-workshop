@@ -1,11 +1,11 @@
 ---
 apiVersion: v2
 name: order-producer
-description: Order publisher (workshop)
+description: Helmet Corp manager rewards portal
 type: application
 version: 0.1.0
 annotations:
   helmet.redhat-appstudio.github.com/bundle-types-supported: product
   helmet.redhat-appstudio.github.com/product-name: Order Producer
-  # TODO (workshop): uncomment when data bundle is listed in helmet.yaml
-  # helmet.redhat-appstudio.github.com/depends-on-bundles: data
+  helmet.redhat-appstudio.github.com/use-product-namespace: Order Producer
+  helmet.redhat-appstudio.github.com/depends-on-bundles: data

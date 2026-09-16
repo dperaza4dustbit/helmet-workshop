@@ -1,5 +1,4 @@
 name: Order Producer
-namespace: CHANGE_ME
 properties:
-  image: order-producer:latest
+  image: docker.io/library/node:20-alpine
   queueName: orders

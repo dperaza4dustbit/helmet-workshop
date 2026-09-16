@@ -1,4 +1,4 @@
-.PHONY: build installer-tar clean
+.PHONY: build installer-tar sync-apps clean
 
 HELMET_ROOT ?= ../helmet
 HELMET_BRANCH ?= composable_bundles
@@ -21,7 +21,15 @@ go.sum: go.mod
 
 deps: go.sum
 
-installer-tar: $(TAR)
+installer-tar: sync-apps $(TAR)
+
+sync-apps:
+	mkdir -p $(INSTALLER_DIR)/bundles/producer/charts/order-producer/files/public
+	mkdir -p $(INSTALLER_DIR)/bundles/consumer/charts/order-consumer/files/public
+	cp ../apps/producer/{server.js,data.js,package.json} $(INSTALLER_DIR)/bundles/producer/charts/order-producer/files/
+	cp ../apps/producer/public/* $(INSTALLER_DIR)/bundles/producer/charts/order-producer/files/public/
+	cp ../apps/consumer/{server.js,data.js,package.json} $(INSTALLER_DIR)/bundles/consumer/charts/order-consumer/files/
+	cp ../apps/consumer/public/* $(INSTALLER_DIR)/bundles/consumer/charts/order-consumer/files/public/
 
 $(TAR):
 	@test -d $(INSTALLER_DIR) || (echo "missing $(INSTALLER_DIR)" && exit 1)

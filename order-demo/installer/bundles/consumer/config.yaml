@@ -1,5 +1,4 @@
 name: Order Consumer
-namespace: CHANGE_ME
 properties:
-  image: order-consumer:latest
+  image: docker.io/library/node:20-alpine
   queueName: orders
