@@ -91,7 +91,7 @@ echo "# building coordinator: $COORDINATOR_IMAGE"
 "$CLI" build -f "$ROOT/coordinator/Dockerfile" \
   --platform "$PLATFORM" \
   -t "$COORDINATOR_IMAGE" \
-  "$ROOT/coordinator"
+  "$ROOT"
 
 if [[ "$NO_PUSH" -eq 0 ]]; then
   echo "# pushing $WORKSHOP_IMAGE"

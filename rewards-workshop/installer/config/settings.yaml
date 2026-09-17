@@ -1,0 +1,3 @@
+# Shared installer settings (merged into config.yaml).
+crc: false
+workshop: true

@@ -1,5 +1,0 @@
-name: order-demo
-products:
-  - local://data
-  - local://producer
-  - local://consumer

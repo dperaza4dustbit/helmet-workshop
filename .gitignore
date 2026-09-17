@@ -1,5 +1,7 @@
 *.tar
-order-demo/order-demo
+rewards-demo/rewards-demo
+rewards-workshop/rewards-workshop
 hack/workshop.env
 out/credentials.csv
+out/coordinator-links.txt
 coordinator/node_modules/

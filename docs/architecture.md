@@ -1,17 +1,17 @@
 # Workshop architecture
 
-DevConf hands-on: build a **Helmet composable-bundles installer** for a small **order pub/sub** demo on a shared OpenShift cluster.
+DevConf hands-on: build a **Helmet composable-bundles installer** for the **Helmet Corp rewards** demo on a shared OpenShift cluster.
 
 ## Runtime picture (per participant)
 
 ```text
 Namespace: workshop-p01 … workshop-p22
 ├── User: workshop-p01 (HTPasswd / cluster IdP) — console login, namespace-scoped edit
-├── Deployment/workshop-pod — oc, helm, go, node, cloned repos
-└── After `order-demo deploy`:
+├── Deployment/workshop-pod — oc, helm, go, node, two installer projects + Helmet source
+└── After rewards-demo / rewards-workshop deploy:
     ├── RabbitMQ + PostgreSQL  (data bundle)
-    ├── order-producer         (publisher → queue)
-    └── order-consumer         (subscriber ← queue)
+    ├── order-producer         (manager portal → queue)
+    └── order-consumer         (store portal ← queue)
 ```
 
 Each participant works **only in their namespace**. The workshop pod is the shell: **OpenShift Console → Pod → Terminal**.
@@ -21,64 +21,44 @@ Each participant works **only in their namespace**. The workshop pod is the shel
 After setup, a small Node.js app runs in **`workshop-coordinator`**:
 
 1. Reads `credentials.csv` (mounted from a Secret — never baked into workshop images).
-2. Serves a public Route; each new browser session dequeues the next row (FIFO).
-3. Persists assignment state on a PVC so slots are not handed out twice.
-4. Refreshing the page returns the **same** credentials (signed session cookie).
-
-Share **one URL** with participants; instructor credentials stay in `out/credentials.csv` only (not in the coordinator queue).
-
-Participants receive **`edit`** in their namespace (deploy/exec pods). Instructors receive **`admin`**. By default setup also removes **`self-provisioner`** from `system:authenticated-users` so console users cannot create new projects (set `RESTRICT_SELF_PROVISIONER=0` on shared clusters if needed).
+2. A **`coordinator,<room-code>,NA`** row supplies the room code; participant rows (`workshop-p*`) are the FIFO queue.
+3. Serves a public Route; visitors enter the room code **before** a slot is dequeued (wrong codes do not consume slots).
+4. Persists assignment state on a PVC so slots are not handed out twice.
+5. Refreshing the page returns the **same** credentials (signed session cookie).
 
 ## Helmet installer (three bundles)
 
-| Bundle     | Role | Charts (typical) |
-|-----------|------|------------------|
-| **data**  | Messaging + persistence | PostgreSQL, RabbitMQ |
-| **producer** | HTTP API publishes orders | `order-producer` |
-| **consumer** | Worker consumes orders | `order-consumer` |
+| Bundle | Role | Charts |
+|--------|------|--------|
+| **data** | Messaging + persistence | `order-rabbitmq`, `order-postgres` |
+| **producer** | Manager rewards portal | `order-producer` |
+| **consumer** | Store fulfillment portal | `order-consumer` |
 
-**`helmet.yaml`** lists all three under `products` as `local://data`, `local://producer`, `local://consumer`.
+Each bundle owns `config.yaml`, `values.yaml.tpl`, and `charts/` with Helmet annotations.
 
-Each bundle owns:
+## Two projects in the workshop image
 
-- `config.yaml` — product name, namespace, properties
-- `values.yaml.tpl` — Helm values for charts in that bundle
-- `charts/<name>/` — Helm chart + `depends-on-*` annotations
+| Path | Audience | Contents |
+|------|----------|----------|
+| `rewards-demo/` | Instructor pod (default cwd) | Complete installer — demo end state |
+| `rewards-workshop/` | Participant pod (default cwd) | Skeleton configs, no `helmet.yaml`, no dependency annotations, deliberate chart bugs |
 
-Participants complete missing pieces; see [workshop-guide.md](workshop-guide.md).
+Participants use the **coordinator page → Lab activities** (source: `rewards-workshop/workshop-activities.md`).
 
 ## Workshop pod image
 
 Built from `container/Dockerfile`:
 
 - `oc`, `helm`, `go`, `node`, `git`, `make`
-- **Local COPY at image build** — `helmet-workshop` + `helmet` (auto-detected as `../helmet` sibling checkout)
-- Default `WORKDIR`: `/home/workshop/helmet-workshop/order-demo`
-
-Participants run:
-
-```bash
-make build          # embed installer tarball → order-demo CLI
-order-demo config --create
-# edit bundles/*/config.yaml, values.yaml.tpl, helmet.yaml
-order-demo template
-order-demo topology
-order-demo deploy
-```
+- Copies `helmet-workshop` + sibling `helmet` at image build
+- Env: `REWARDS_DEMO_HOME`, `REWARDS_WORKSHOP_HOME`
+- Default cwd: `rewards-workshop` (participants); instructor deployments override to `rewards-demo`
 
 ## Cluster provisioning
 
 | Script | Purpose |
 |--------|---------|
-| `hack/setup-workshop.sh` | Namespaces, RBAC, workshop Deployments, HTPasswd users, coordinator Route |
-| `hack/cleanup-workshop.sh` | Remove workshop + `workshop-coordinator` namespaces |
+| `hack/setup-workshop.sh` | Namespaces, RBAC, workshop Deployments, coordinator Route |
+| `hack/cleanup-workshop.sh` | Remove workshop resources |
 
-Requires **cluster-admin** (or sufficient privileges) once per cluster before the session.
-
-## Instructor vs participant
-
-- **20** namespaces: `workshop-p01` … `workshop-p20` — **`edit`** in their namespace only
-- **2** instructor namespaces: `workshop-i01`, `workshop-i02` — **`admin`** in their own namespace plus **`edit`** (default) on every participant namespace so they can monitor and help, but not see other instructors’ namespaces
-- Instructor credentials are **not** handed out via the coordinator; use `out/credentials.csv`
-
-Credentials are written to `out/credentials.csv` when HTPasswd users are created (optional; may use your org’s existing IdP instead).
+Requires **cluster-admin** once per cluster before the session.
