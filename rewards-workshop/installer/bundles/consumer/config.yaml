@@ -1,0 +1,5 @@
+# Activity 6 — consumer product properties.
+name: Order Consumer
+properties:
+  image: docker.io/library/node:20-alpine
+  queueName: order

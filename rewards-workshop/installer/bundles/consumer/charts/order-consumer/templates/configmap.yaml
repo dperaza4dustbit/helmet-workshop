@@ -1,0 +1,22 @@
+{{- if .Values.orderConsumer.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-consumer-app
+  namespace: {{ .Values.orderConsumer.namespace }}
+  labels:
+    app.kubernetes.io/part-of: rewards-workshop
+data:
+  server.js: |
+{{ .Files.Get "files/server.js" | indent 4 }}
+  data.js: |
+{{ .Files.Get "files/data.js" | indent 4 }}
+  package.json: |
+{{ .Files.Get "files/package.json" | indent 4 }}
+  index.html: |
+{{ .Files.Get "files/public/index.html" | indent 4 }}
+  app.js: |
+{{ .Files.Get "files/public/app.js" | indent 4 }}
+  styles.css: |
+{{ .Files.Get "files/public/styles.css" | indent 4 }}
+{{- end }}

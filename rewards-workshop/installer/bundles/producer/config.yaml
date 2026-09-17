@@ -1,0 +1,5 @@
+# Activity 5 — producer product properties.
+name: Order Producer
+properties:
+  image: docker.io/library/node:20-alpine
+  queueName: order

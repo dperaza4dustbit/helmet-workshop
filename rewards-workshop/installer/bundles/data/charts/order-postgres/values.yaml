@@ -1,0 +1,22 @@
+---
+pgsqlService:
+  podName: pgsql
+  secretName: pgsql-user
+  storageSize: 5Gi
+  image:
+    name: postgresql-16
+    repository: registry.redhat.io/rhel9/
+    pullPolicy: IfNotPresent
+    tag: "1-1754433677"
+  service:
+    name: pgsql
+    type: ClusterIP
+    port: 5432
+  resources:
+    limits:
+      cpu: "500m"
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  instances: []

@@ -1,36 +1,17 @@
-# Participant guide (DevConf)
+# Participant guide
 
-## Goal
+## Two browser tabs
 
-Wire three composable bundles into one installer and deploy an order **publisher → RabbitMQ → subscriber** stack in **your** namespace.
+1. **Coordinator** (this page from your instructor) — credentials + collapsible **Lab activities** checklist
+2. **OpenShift Console** — your namespace → **workshop** pod → **Terminal**
 
-## What is intentionally incomplete
+During login, only use the credentials and **Getting started** steps. Your
+instructor will tell you when to expand **Lab activities** on the coordinator page.
 
-You must fill in (at minimum):
+## Pod terminal
 
-1. **`installer/helmet.yaml`** — list all `local://` products
-2. **`installer/bundles/data/config.yaml`** — product namespace and properties (DB, AMQP)
-3. **`installer/bundles/data/values.yaml.tpl`** — values for PostgreSQL and RabbitMQ charts
-4. **`installer/bundles/producer/`** and **`consumer/`** — same pattern
-5. **Chart annotations** — `depends-on-bundles: data` on producer and consumer
-6. **Root `installer/values.yaml.tpl`** — only if shared globals are needed
+The login banner reminds you to expand activities on the coordinator page. The pod
+terminal opens in `rewards-workshop` — start Activity 1 when your instructor
+tells you.
 
-Hints live in `TODO` comments in the repo. Instructors have a full reference under `docs/solution/` (not distributed to participants if you prefer).
-
-## Suggested flow
-
-1. Open the **workshop coordinator** link from your instructor (one click → your console URL, username, password).
-2. Log in to OpenShift console → your namespace → **Workloads → Pods → workshop** → **Terminal**.
-3. `cd "$ORDER_DEMO_HOME"` and `export KUBECONFIG=""` (Helmet uses the pod ServiceAccount, not `~/.kube/config`).
-4. Read bundle READMEs under `installer/bundles/*/README.md`.
-5. `make build`, then `./order-demo config --create --namespace "$WORKSHOP_NAMESPACE"`.
-6. `order-demo topology` — fix cycles / missing deps until it succeeds.
-7. `order-demo deploy` — wait for Helm releases.
-8. Verify: producer HTTP endpoint enqueues; consumer logs processed orders.
-
-## Success criteria
-
-- `order-demo topology` prints producer → data → consumer order without errors
-- RabbitMQ queue receives messages from producer
-- Consumer pod logs show consumed orders
-- PostgreSQL holds order rows (if your charts persist there)
+Success = all activity checkboxes done and `./rewards-workshop deploy` shows both reward portal URLs.

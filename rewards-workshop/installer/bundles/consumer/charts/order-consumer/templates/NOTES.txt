@@ -1,0 +1,24 @@
+{{- if .Values.orderConsumer.enabled }}
+Helmet Corp — Deployment Summary
+================================
+{{- if and .Values.orderConsumer.managerPortal.hostname .Values.orderConsumer.route.hostname }}
+
+Manager portal (rewards):
+  https://{{ .Values.orderConsumer.managerPortal.hostname }}/
+
+Store portal (fulfillment):
+  https://{{ .Values.orderConsumer.route.hostname }}/
+{{- else }}
+
+Manager portal (rewards):
+  oc -n {{ .Values.orderConsumer.namespace }} get route order-producer -o jsonpath='https://{.spec.host}{"\n"}'
+
+Store portal (fulfillment):
+  oc -n {{ .Values.orderConsumer.namespace }} get route order-consumer -o jsonpath='https://{.spec.host}{"\n"}'
+{{- end }}
+
+Flow:
+  1. Managers submit thank-you orders in the manager portal.
+  2. Corp store staff ship orders from the store portal.
+  3. Managers mark orders delivered after the department meeting.
+{{- end }}

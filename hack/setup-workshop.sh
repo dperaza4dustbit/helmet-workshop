@@ -77,6 +77,27 @@ workshop_password_for_slot() {
   generate_workshop_password
 }
 
+# Room code for the coordinator gate (CSV row: coordinator,<code>,NA).
+# Generated automatically unless WORKSHOP_CHALLENGE is set in workshop.env.
+workshop_challenge_for_session() {
+  if [[ -n "${WORKSHOP_CHALLENGE:-}" ]]; then
+    printf '%s' "$WORKSHOP_CHALLENGE"
+    return 0
+  fi
+  generate_workshop_challenge
+}
+
+append_credentials_coordinator_row() {
+  local challenge
+  challenge="$(workshop_challenge_for_session)"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    log "[dry-run] would append coordinator,***,NA room-code row to credentials CSV"
+    return 0
+  fi
+  echo "coordinator,${challenge},NA" >>"${CREDENTIALS_FILE}.tmp"
+  log "Room code for coordinator page: ${challenge} (also in ${CREDENTIALS_FILE} as coordinator row)"
+}
+
 run() {
   if [[ "$DRY_RUN" -eq 1 ]]; then
     log "[dry-run] $*"
@@ -376,6 +397,10 @@ append_htpasswd_user() {
 
 deploy_workshop_pod() {
   local ns="$1"
+  local working_dir="/home/workshop/helmet-workshop/rewards-workshop"
+  if is_instructor_namespace "$ns"; then
+    working_dir="/home/workshop/helmet-workshop/rewards-demo"
+  fi
   run oc apply -n "$ns" -f - <<EOF
 apiVersion: v1
 kind: ServiceAccount
@@ -426,14 +451,16 @@ spec:
               value: ${ns}
             - name: HELMET_SRC
               value: /home/workshop/helmet
-            - name: ORDER_DEMO_HOME
-              value: /home/workshop/helmet-workshop/order-demo
+            - name: REWARDS_DEMO_HOME
+              value: /home/workshop/helmet-workshop/rewards-demo
+            - name: REWARDS_WORKSHOP_HOME
+              value: /home/workshop/helmet-workshop/rewards-workshop
             - name: WORKSHOP_IMAGE
               value: ${WORKSHOP_IMAGE}
             # Helmet CLI: use in-cluster ServiceAccount auth (no ~/.kube/config in the pod).
             - name: KUBECONFIG
               value: ""
-          workingDir: /home/workshop/helmet-workshop/order-demo
+          workingDir: ${working_dir}
           resources:
             requests:
               cpu: 250m
@@ -507,6 +534,7 @@ sync_coordinator_credentials_secret() {
   tmp="$(mktemp)"
   {
     head -n1 "$CREDENTIALS_FILE"
+    grep -E '^coordinator,' "$CREDENTIALS_FILE" || true
     grep -E "^${WORKSHOP_PREFIX}-p[0-9]+," "$CREDENTIALS_FILE" || true
   } >"$tmp"
   participant_rows=$(($(wc -l <"$tmp") - 1))
@@ -660,7 +688,12 @@ EOF
     sleep 2
   done
   if [[ -n "$route_host" ]]; then
-    log "Coordinator URL (share with participants): https://${route_host}/"
+    if [[ "$DRY_RUN" -eq 0 ]]; then
+      "${SCRIPT_DIR}/publish-coordinator-url.sh" "https://${route_host}/" \
+        || log "Warning: publish-coordinator-url.sh failed (short URL/DNS optional)"
+    else
+      log "[dry-run] would run publish-coordinator-url.sh for https://${route_host}/"
+    fi
   else
     log "Coordinator deployed; route host not ready yet — check: oc get route -n $COORDINATOR_NAMESPACE"
   fi
@@ -719,6 +752,7 @@ main() {
 
   if [[ "$SKIP_HTPASSWD" -eq 0 ]]; then
     if [[ "$DRY_RUN" -eq 0 ]]; then
+      append_credentials_coordinator_row
       mv "${CREDENTIALS_FILE}.tmp" "$CREDENTIALS_FILE"
       log "Done. Credentials: $CREDENTIALS_FILE"
     else

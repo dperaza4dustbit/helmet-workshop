@@ -1,12 +1,19 @@
 # Helmet composable bundles — DevConf workshop
 
-Hands-on: **22 isolated namespaces** (20 participants + 2 instructors), each with a **workshop pod** (oc, helm, go, Node, Helmet @ `composable_bundles`). Participants complete an **order-demo** installer with three bundles:
+Hands-on: **22 isolated namespaces** (20 participants + 2 instructors), each with a **workshop pod** (oc, helm, go, Node, Helmet @ `composable_bundles`).
+
+| Directory | Audience | Purpose |
+|-----------|----------|---------|
+| **`rewards-demo`** | Instructor (default pod cwd for demo) | Complete reference installer — demo the end state first |
+| **`rewards-workshop`** | Participants (default pod cwd) | Stripped installer; checklist on **coordinator page → Lab activities** |
+
+Three composable bundles in both projects:
 
 | Bundle | Purpose |
 |--------|---------|
 | **data** | PostgreSQL + RabbitMQ |
-| **producer** | Publishes orders to the queue |
-| **consumer** | Subscribes and processes orders |
+| **producer** | Manager rewards portal (publishes orders) |
+| **consumer** | Store fulfillment portal (processes orders) |
 
 ## Repository layout
 
@@ -15,13 +22,13 @@ helmet-workshop/
 ├── apps/                 # Node.js producer & consumer (reference impl)
 ├── coordinator/          # FIFO web app: hands out console credentials
 ├── container/            # Workshop pod + coordinator image builds
-├── docs/                 # Architecture, participant guide, instructor solution
+├── docs/
+│   ├── workshop-activities.md   # Pointer → rewards-workshop/workshop-activities.md
+│   ├── workshop-guide.md
+│   └── architecture.md
 ├── hack/                 # setup-workshop.sh, cleanup-workshop.sh
-└── order-demo/           # Helmet installer (full solution; workshop will start from a stripped copy)
-    ├── main.go
-    └── installer/
-        ├── helmet.yaml   # Lists data, producer, consumer bundles
-        └── bundles/{data,producer,consumer}/
+├── rewards-demo/         # Full solution (instructor reference)
+└── rewards-workshop/     # Participant lab + workshop-activities.md
 ```
 
 ## Before the session (instructors)
@@ -45,13 +52,11 @@ export INSTRUCTOR_COUNT=2
 # HELMET_DIR only if Helmet is not ../helmet (auto-detected by default)
 ```
 
-1. **Build & push** both images (requires `podman login quay.io`; `DOCKER_BUILDKIT` is set by the script):
+1. **Build & push** both images (requires `podman login quay.io`):
 
    ```bash
    ./container/build.sh
    ```
-
-   Builds and pushes **workshop** + **coordinator** (`quay.io/.../helmet-workshop-coordinator:dev` derived from `WORKSHOP_IMAGE`). Local-only: `./container/build.sh --no-push`
 
 2. **Provision namespaces** (requires `oc login` as cluster-admin):
 
@@ -59,59 +64,42 @@ export INSTRUCTOR_COUNT=2
    ./hack/setup-workshop.sh
    ```
 
-   Uses the same `WORKSHOP_IMAGE` from your env. Coordinator URL is printed at the end; instructor backup: `out/credentials.csv`.
+   Setup writes **`out/coordinator-links.txt`**: OpenShift Route URL, optional **TinyURL** short link, and QR image URL. Custom slug: `WORKSHOP_SHORTURL_SLUG` + `TINYURL_API_TOKEN` in `hack/workshop.env`.
 
-3. Optionally use `--skip-htpasswd` (Keycloak-only) or `--skip-coordinator`.
+3. **Teardown**: `./hack/cleanup-workshop.sh`
 
-4. **Teardown**:
+## Session flow
 
-   ```bash
-   ./hack/setup-workshop.sh --dry-run   # preview
-   ./hack/cleanup-workshop.sh
-   ```
+1. **Instructor demo** from the instructor pod (default cwd: `rewards-demo`).
+2. **Participants** open the coordinator page, log in to the console, then expand **Lab activities** when instructed (pod terminal already in `rewards-workshop`).
 
-## Participant flow
-
-See [docs/workshop-guide.md](docs/workshop-guide.md) and bundle READMEs under `order-demo/installer/bundles/*/`.
-
-Console → namespace → **workshop** pod terminal:
+Instructor demo:
 
 ```bash
-cd ~/helmet-workshop/order-demo   # or: cd "$ORDER_DEMO_HOME"
-export KUBECONFIG=""              # in-cluster auth via workshop ServiceAccount
+# instructor pod — already in rewards-demo
+export KUBECONFIG=""
 make build
-./order-demo config --create --namespace "$WORKSHOP_NAMESPACE"
-# edit helmet.yaml, bundles/*/config.yaml, values.yaml.tpl
-./order-demo topology
-./order-demo deploy
+./rewards-demo config --create --namespace "$WORKSHOP_NAMESPACE"
+./rewards-demo topology
+./rewards-demo deploy
 ```
+
+After the demo, instructors `cd ../rewards-workshop` to follow along with participants.
 
 ## Local development (outside the cluster)
 
-Helmet is **not** selected inside the workshop pod. You choose the branch when building the **container image**:
+Helmet is copied into the image at build time from a sibling `../helmet` checkout:
 
 ```bash
 cd ../helmet && git checkout "${HELMET_BRANCH:-composable_bundles}"
-cd ../helmet-workshop/order-demo && make deps
-HELMET_DIR=/path/to/helmet HELMET_BRANCH=composable_bundles WORKSHOP_IMAGE=... ./container/build.sh
+cd ../helmet-workshop/rewards-demo && make deps && make build
+HELMET_DIR=/path/to/helmet ./container/build.sh --no-push
 ```
 
-Inside the pod, `order-demo/go.mod` uses `replace ... => ../../helmet` (the tree copied into the image at build time).
-
-Requires sibling **`helmet`** (branch set via **`HELMET_BRANCH`** when building the image):
+Validate that completing all activities yields the same bundles as `rewards-demo`:
 
 ```bash
-git clone -b composable_bundles https://github.com/redhat-appstudio/helmet.git ../helmet
-# or: HELMET_BRANCH=your-branch HELMET_CHECKOUT=1 ./container/build.sh
-cd order-demo && make deps && make build
+./hack/validate-activities.sh
 ```
-
-## Next steps for instructors
-
-- [ ] Fill `docs/solution/` with a working installer (keep private until after the lab)
-- [ ] Replace stub Helm charts with minimal but working Postgres/RabbitMQ/app Deployments
-- [ ] Add slide deck + timing (suggest 90–120 min)
-- [ ] Pin image digest on Quay for reproducibility (Helmet branch + workshop git tag at build time)
-- [ ] Test `setup-workshop.sh` on your DevConf cluster quota (22 namespaces × pod resources)
 
 Architecture details: [docs/architecture.md](docs/architecture.md).

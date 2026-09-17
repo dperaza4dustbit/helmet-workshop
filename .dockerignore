@@ -2,6 +2,8 @@
 out/
 hack/out/
 coordinator/node_modules/
-order-demo/order-demo
-order-demo/installer/installer.tar
+rewards-demo/rewards-demo
+rewards-demo/installer/installer.tar
+rewards-workshop/rewards-workshop
+rewards-workshop/installer/installer.tar
 **/.DS_Store

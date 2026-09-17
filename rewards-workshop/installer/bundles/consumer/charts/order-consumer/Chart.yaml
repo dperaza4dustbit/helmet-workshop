@@ -1,0 +1,10 @@
+---
+apiVersion: v2
+name: order-consumer
+description: Helmet Corp store fulfillment portal
+type: application
+version: 0.1.0
+annotations:
+  helmet.redhat-appstudio.github.com/bundle-types-supported: product
+  helmet.redhat-appstudio.github.com/product-name: Order Consumer
+  helmet.redhat-appstudio.github.com/use-product-namespace: Order Consumer

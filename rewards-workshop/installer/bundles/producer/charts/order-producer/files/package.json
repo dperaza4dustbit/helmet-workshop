@@ -1,0 +1,11 @@
+{
+  "name": "order-producer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "amqplib": "^0.10.4",
+    "express": "^4.21.0",
+    "pg": "^8.13.0"
+  }
+}

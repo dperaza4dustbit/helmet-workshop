@@ -1,0 +1,7 @@
+Order Data — RabbitMQ
+=====================
+Queue:   {{ .Values.rabbitmq.queueName }}
+Secret:  orders-rabbitmq-user (namespace {{ .Values.rabbitmq.namespace }})
+Service: orders-rabbitmq.{{ .Values.rabbitmq.namespace }}.svc:{{ .Values.rabbitmq.service.port }}
+
+AMQP connection details are in the orders-rabbitmq-user Secret for producer and consumer apps.

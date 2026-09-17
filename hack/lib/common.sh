@@ -15,7 +15,16 @@ COORDINATOR_NAMESPACE="${COORDINATOR_NAMESPACE:-workshop-coordinator}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/out}"
 CREDENTIALS_FILE="${OUTPUT_DIR}/credentials.csv"
 
-# COORDINATOR_IMAGE unset here — use resolve_coordinator_image WORKSHOP_IMAGE
+# Load hack/workshop.env when present (gitignored local config).
+_workshop_env_file="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/workshop.env"
+if [[ -f "$_workshop_env_file" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$_workshop_env_file"
+  set +a
+fi
+
+# Default COORDINATOR_IMAGE via resolve_coordinator_image from WORKSHOP_IMAGE.
 resolve_coordinator_image() {
   local workshop_image="${1:-${WORKSHOP_IMAGE:-}}"
   if [[ -n "${COORDINATOR_IMAGE:-}" ]]; then
@@ -130,4 +139,16 @@ generate_workshop_password() {
   fi
   [[ -n "$pass" ]] || die "failed to generate password for workshop user"
   printf '%s' "$pass"
+}
+
+# Room code for the coordinator gate (shorter, no ambiguous chars — easier to read aloud).
+generate_workshop_challenge() {
+  local code
+  if command -v openssl >/dev/null 2>&1; then
+    code="$(openssl rand -base64 12 | tr -d '/+="\n,0O1lI' | head -c 10)"
+  else
+    code="$(LC_ALL=C tr -dc 'A-HJ-NP-Z2-9' </dev/urandom | head -c 10)"
+  fi
+  [[ -n "$code" ]] || die "failed to generate room code for coordinator"
+  printf '%s' "$code"
 }

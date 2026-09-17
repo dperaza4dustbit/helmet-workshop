@@ -1,0 +1,5 @@
+name: rewards-demo
+products:
+  - local://data
+  - local://producer
+  - local://consumer

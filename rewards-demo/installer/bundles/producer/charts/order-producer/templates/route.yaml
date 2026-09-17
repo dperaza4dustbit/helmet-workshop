@@ -1,0 +1,22 @@
+{{- if .Values.orderProducer.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: order-producer
+  namespace: {{ .Values.orderProducer.namespace }}
+  labels:
+    app: order-producer
+    app.kubernetes.io/part-of: rewards-demo
+spec:
+  {{- with .Values.orderProducer.route.hostname }}
+  host: {{ . }}
+  {{- end }}
+  to:
+    kind: Service
+    name: order-producer
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

@@ -39,21 +39,29 @@ RUN useradd -u 1001 -g 0 -m -d /home/workshop -s /bin/bash workshop
 
 COPY --from=helmet . /home/workshop/helmet
 COPY . /home/workshop/helmet-workshop
+RUN mkdir -p /home/workshop/.bashrc.d && \
+    cp /home/workshop/helmet-workshop/container/workshop-bashrc.sh /home/workshop/.bashrc.d/workshop.sh && \
+    grep -q 'bashrc.d' /home/workshop/.bashrc 2>/dev/null || \
+    printf '\n# Workshop banner\nfor rc in ~/.bashrc.d/*; do [ -f "$rc" ] && . "$rc"; done\n' >> /home/workshop/.bashrc
 # OpenShift assigns a random UID; g+rwX alone fails if the process is not in group 0.
 # Workshop content is non-secret lab material — world read/write is OK in an isolated namespace.
-RUN chown -R 1001:0 /home/workshop && \
+RUN mkdir -p /home/workshop/.cache/go-mod /home/workshop/.cache/go-build && \
+    chown -R 1001:0 /home/workshop && \
     chmod -R a+rwX /home/workshop
 
 USER 1001
 
 ENV HOME=/home/workshop
 ENV HELMET_SRC=/home/workshop/helmet
-ENV ORDER_DEMO_HOME=/home/workshop/helmet-workshop/order-demo
+ENV HELMET_ROOT=/home/workshop/helmet
+ENV REWARDS_DEMO_HOME=/home/workshop/helmet-workshop/rewards-demo
+ENV REWARDS_WORKSHOP_HOME=/home/workshop/helmet-workshop/rewards-workshop
 ENV PATH="/home/workshop/go/bin:${PATH}"
-ENV GOMODCACHE=/tmp/go-mod
-ENV GOCACHE=/tmp/go-cache
+ENV GOMODCACHE=/home/workshop/.cache/go-mod
+ENV GOCACHE=/home/workshop/.cache/go-build
 
-WORKDIR /home/workshop/helmet-workshop/order-demo
-RUN go mod download
+WORKDIR /home/workshop/helmet-workshop/rewards-workshop
+RUN go mod download -C /home/workshop/helmet-workshop/rewards-demo
+RUN go mod download -C /home/workshop/helmet-workshop/rewards-workshop
 
 CMD ["sleep", "infinity"]
