@@ -64,4 +64,19 @@ WORKDIR /home/workshop/helmet-workshop/rewards-workshop
 RUN go mod download -C /home/workshop/helmet-workshop/rewards-demo
 RUN go mod download -C /home/workshop/helmet-workshop/rewards-workshop
 
+# Seed GOCACHE so the first in-pod `make build` is mostly incremental (seconds, not ~30s).
+# rewards-workshop has no helmet.yaml until Activity 1 — borrow demo's for a one-shot compile, then remove.
+# Re-chmod after seed: OpenShift uses an arbitrary UID; files created here must stay a+rwX or
+# in-pod `make` cannot rewrite installer/installer.tar (Permission denied).
+RUN make -C /home/workshop/helmet-workshop/rewards-demo build && \
+    cp /home/workshop/helmet-workshop/rewards-demo/installer/helmet.yaml \
+       /home/workshop/helmet-workshop/rewards-workshop/installer/helmet.yaml && \
+    sed -i 's/^name: rewards-demo$/name: rewards-workshop/' \
+       /home/workshop/helmet-workshop/rewards-workshop/installer/helmet.yaml && \
+    make -C /home/workshop/helmet-workshop/rewards-workshop build && \
+    rm -f /home/workshop/helmet-workshop/rewards-workshop/rewards-workshop \
+          /home/workshop/helmet-workshop/rewards-workshop/installer/helmet.yaml \
+          /home/workshop/helmet-workshop/rewards-workshop/installer/installer.tar && \
+    chmod -R a+rwX /home/workshop
+
 CMD ["sleep", "infinity"]

@@ -5,6 +5,8 @@ HELMET_BRANCH ?= composable_bundles
 MCP_IMAGE ?= $(WORKSHOP_IMAGE)
 INSTALLER_DIR := installer
 TAR := $(INSTALLER_DIR)/installer.tar
+# Rebuild the embed tarball whenever anything under installer/ changes (except the tar itself).
+INSTALLER_SOURCES := $(shell find $(INSTALLER_DIR) -type f ! -name 'installer.tar' 2>/dev/null)
 
 LDFLAGS :=
 ifneq ($(MCP_IMAGE),)
@@ -35,7 +37,7 @@ sync-apps:
 	cp ../apps/consumer/{server.js,data.js,package.json} $(INSTALLER_DIR)/bundles/consumer/charts/order-consumer/files/
 	cp ../apps/consumer/public/* $(INSTALLER_DIR)/bundles/consumer/charts/order-consumer/files/public/
 
-$(TAR):
+$(TAR): $(INSTALLER_SOURCES)
 	@test -d $(INSTALLER_DIR) || (echo "missing $(INSTALLER_DIR)" && exit 1)
 	@test -f $(INSTALLER_DIR)/helmet.yaml || (echo "create installer/helmet.yaml first (see workshop-activities.md or coordinator Lab activities)" && exit 1)
 	tar -C $(INSTALLER_DIR) -cf $(TAR) \

@@ -16,7 +16,7 @@ Your pod terminal opens in `rewards-workshop` — no directory change needed.
 | You changed | Then run |
 |-------------|----------|
 | Anything under `installer/` (charts, `values.yaml.tpl`, `helmet.yaml`, …) | `make build` |
-| A bundle `config.yaml` (product properties) | `make build` **and** `./rewards-workshop config --create --force --namespace "$WORKSHOP_NAMESPACE"` |
+| A bundle `config.yaml` (product properties) | `make build` **and** `./rewards-workshop config --create --force -n "$WORKSHOP_NAMESPACE"` |
 | Ready to check ordering | `./rewards-workshop topology` |
 | Ready to roll out | `./rewards-workshop deploy` |
 
@@ -59,14 +59,16 @@ Edit `installer/bundles/data/config.yaml`.
 - [ ] `queueName` is **`orders`** (not `order`)
 - [ ] `databaseName` is `orders`
 - [ ] `make build`
-- [ ] `./rewards-workshop config --create --namespace "$WORKSHOP_NAMESPACE"` (first time — merges bundle configs into the cluster)
-- [ ] `./rewards-workshop topology` — expect errors or incomplete output until values are fixed (Activity 3)
+- [ ] `./rewards-workshop config --create -n "$WORKSHOP_NAMESPACE"` (first time — merges bundle configs into the cluster)
+- [ ] `oc get cm rewards-workshop-config -o yaml` — verify the merged config (Order Data properties, `queueName: orders`)
+- [ ] `./rewards-workshop topology` — charts list with empty Depends-On (no errors; RabbitMQ may be missing until Activity 3)
 
 <details>
 <summary>Hint</summary>
 
-The starter file uses `queueName: order` on purpose. All bundles must share
-the same queue name.
+Open the file with `vi installer/bundles/data/config.yaml`. The starter file
+uses `queueName: order` on purpose — change it to `orders`. All bundles must
+share the same queue name.
 </details>
 
 ---
@@ -79,13 +81,35 @@ Complete `installer/bundles/data/values.yaml.tpl`.
 - [ ] `rabbitmq.enabled` is `true`
 - [ ] RabbitMQ `namespace` and `queueName` come from the Order Data product
 - [ ] `make build`
-- [ ] `./rewards-workshop topology` lists data charts (ordering may still be wrong)
+- [ ] `./rewards-workshop template -n "$WORKSHOP_NAMESPACE" bundles/data/charts/order-postgres` — see rendered values + manifests for Postgres (ConfigMap → tpl → chart)
+- [ ] `./rewards-workshop template -n "$WORKSHOP_NAMESPACE" bundles/data/charts/order-rabbitmq` — same for RabbitMQ (same `bundles/data/values.yaml.tpl`)
 
 <details>
 <summary>Hint</summary>
 
-See `../rewards-demo/installer/bundles/data/values.yaml.tpl`. Use
-`required` / `default` helpers and `.Installer.Products.Order_Data`.
+Open the file with `vi installer/bundles/data/values.yaml.tpl`.
+
+**Composition glue:** the chart declares what it needs; the bundle ConfigMap
+holds product properties; `values.yaml.tpl` maps one into the other.
+
+1. Look at `installer/bundles/data/charts/order-postgres/values.yaml` —
+   `pgsqlService.instances` starts as `[]`.
+2. Look at the chart templates (e.g. `templates/postgres/pgsql-service.yaml`) —
+   they `range` over instances and expect fields like `name`, `enabled`,
+   `namespace`, and `dbname`.
+3. Fill those fields from the Order Data product in the ConfigMap via
+   `.Installer.Products.Order_Data` (use `required` / `default`). Do the same
+   for RabbitMQ from that chart’s `values.yaml` / templates.
+
+Product names in the ConfigMap (e.g. `Order Data`) become template keys with
+spaces replaced by underscores (`Order_Data`).
+
+Stuck? Compare with `../rewards-demo/installer/bundles/data/values.yaml.tpl`.
+
+Both `template` calls use the same `bundles/data/values.yaml.tpl`. Default
+output shows “Values (Raw)” (rendered tpl from ConfigMap) plus Helm manifests
+with chart `values.yaml` defaults merged in — look for your namespace,
+`dbname: orders`, and `queueName: orders` in the resources.
 </details>
 
 ---
@@ -94,9 +118,17 @@ See `../rewards-demo/installer/bundles/data/values.yaml.tpl`. Use
 
 Open `installer/bundles/data/charts/order-postgres/Chart.yaml`.
 
-- [ ] Add annotation `helmet.redhat-appstudio.github.com/depends-on-bundle-charts: order-rabbitmq`
+- [ ] Add annotation `helmet.redhat-appstudio.github.com/depends-on-bundle-charts: order-rabbitmq` to the PostgreSQL `Chart.yaml` (`installer/bundles/data/charts/order-postgres/Chart.yaml`)
 - [ ] `make build`
 - [ ] `./rewards-workshop topology` — **rabbitmq before postgres** within the data bundle
+
+<details>
+<summary>Hint</summary>
+
+Open with `vi installer/bundles/data/charts/order-postgres/Chart.yaml` and add
+the annotation under the existing `annotations:` block (same file as
+`product-name: Order Data`).
+</details>
 
 <details>
 <summary>Why</summary>
@@ -111,16 +143,34 @@ correct within the data bundle.
 
 - [ ] `installer/bundles/producer/config.yaml` — set `queueName: orders`
 - [ ] `make build`
-- [ ] `./rewards-workshop config --create --force --namespace "$WORKSHOP_NAMESPACE"`
+- [ ] `./rewards-workshop config --create --force -n "$WORKSHOP_NAMESPACE"`
+- [ ] `oc get cm rewards-workshop-config -o yaml` — verify Order Producer has `queueName: orders`
 - [ ] `installer/bundles/producer/values.yaml.tpl` — enable `orderProducer`
 - [ ] Wire DB/RabbitMQ secret names and manager route hostname in the same file
 - [ ] `make build`
+- [ ] `./rewards-workshop template --show-manifests=false -n "$WORKSHOP_NAMESPACE" bundles/producer/charts/order-producer` — confirm rendered values (`enabled`, `queueName: orders`, secret names, manager route hostname)
 
 <details>
 <summary>Hint</summary>
 
-Reference `../rewards-demo/installer/bundles/producer/`. Route host pattern:
-`rewards-managers-{{ $ns }}.{{ ingress }}`.
+Open with `vi installer/bundles/producer/config.yaml` (set `queueName: orders`)
+and `vi installer/bundles/producer/values.yaml.tpl` (enable the app and wire
+secrets/route).
+
+Compare with:
+- `../rewards-demo/installer/bundles/producer/config.yaml`
+- `../rewards-demo/installer/bundles/producer/values.yaml.tpl`
+
+Route host pattern: `rewards-managers-{{ $ns }}.{{ ingress }}`.
+
+`databaseName` stays on Order Data — the producer only references the existing
+`orders-pgsql-user` secret.
+
+Secret names like `orders-pgsql-user` / `orders-rabbitmq-user` are **created**
+by the data charts (`order-postgres` / `order-rabbitmq` templates), not by the
+producer chart. In `values.yaml.tpl` you only point at those names so the
+Deployment can mount them (`secretKeyRef`). Look at the data chart templates
+if you want to see where the Secrets are rendered.
 </details>
 
 ---
@@ -129,16 +179,37 @@ Reference `../rewards-demo/installer/bundles/producer/`. Route host pattern:
 
 - [ ] `installer/bundles/consumer/config.yaml` — set `queueName: orders`
 - [ ] `make build`
-- [ ] `./rewards-workshop config --create --force --namespace "$WORKSHOP_NAMESPACE"`
+- [ ] `./rewards-workshop config --create --force -n "$WORKSHOP_NAMESPACE"`
+- [ ] `oc get cm rewards-workshop-config -o yaml` — verify Order Consumer has `queueName: orders`
 - [ ] `installer/bundles/consumer/values.yaml.tpl` — enable `orderConsumer`
 - [ ] Wire DB/RabbitMQ secret names in the same file
 - [ ] Wire **both** route hostnames (store + manager portal link)
 - [ ] `make build`
+- [ ] `./rewards-workshop template --show-manifests=false -n "$WORKSHOP_NAMESPACE" bundles/consumer/charts/order-consumer` — confirm rendered values (`enabled`, `queueName: orders`, secret names, store + manager hostnames)
 
 <details>
 <summary>Hint</summary>
 
-Reference `../rewards-demo/installer/bundles/consumer/`.
+Open with `vi installer/bundles/consumer/config.yaml` (set `queueName: orders`)
+and `vi installer/bundles/consumer/values.yaml.tpl` (enable the app and wire
+secrets/routes).
+
+Compare with:
+- `../rewards-demo/installer/bundles/consumer/config.yaml`
+- `../rewards-demo/installer/bundles/consumer/values.yaml.tpl`
+
+Route host patterns:
+- store: `rewards-store-{{ $ns }}.{{ ingress }}`
+- manager portal link: `rewards-managers-{{ $ns }}.{{ ingress }}`
+
+`databaseName` stays on Order Data — the consumer only references the existing
+`orders-pgsql-user` secret.
+
+Secret names like `orders-pgsql-user` / `orders-rabbitmq-user` are **created**
+by the data charts (`order-postgres` / `order-rabbitmq` templates), not by the
+consumer chart. In `values.yaml.tpl` you only point at those names so the
+Deployment can mount them (`secretKeyRef`). Look at the data chart templates
+if you want to see where the Secrets are rendered.
 </details>
 
 ---
